@@ -1,45 +1,41 @@
 # Molecular Code of Biological Raman Spectroscopy
 
-This repository provides the core computational implementations accompanying the study **"Molecular Code of Biological Raman Spectroscopy."**
+This repository contains the computational code associated with the study *Molecular Code of Biological Raman Spectroscopy*.
 
 ## Overview
 
-Raman spectroscopy enables label-free, nondestructive characterization of biological samples by probing their intrinsic molecular vibrations. However, the molecular interpretation of complex biological Raman spectra remains challenging due to extensive spectral overlap and contributions from multiple molecular species.
+Raman spectroscopy provides label-free measurements of molecular vibrations in biological specimens, but assigning overlapping Raman signals to individual molecular species remains challenging. In this study, spatially paired Raman measurements and matrix-assisted laser desorption/ionization mass spectrometry imaging (MALDI-MSI) are used to investigate the molecular information encoded in biological Raman spectra.
 
-In this study, we integrate spatially paired Raman spectroscopy and matrix-assisted laser desorption/ionization mass spectrometry imaging (MALDI-MSI) to investigate the molecular information encoded in biological Raman spectra. By establishing computational relationships between Raman spectral features and mass spectrometry-derived molecular measurements, the framework enables bidirectional analysis of spectral and molecular information.
+The computational framework examines the relationship between Raman spectral features and MALDI-derived molecular profiles in two directions: predicting Raman spectra from molecular measurements (**Decoder**) and predicting molecular profiles from Raman spectra (**Translator**).
 
-This repository provides Python implementations of two core computational components: **molecular-to-spectral decoding (Decoder)** and **spectral-to-molecular translation (Translator)**.
+## Experimental and computational framework
 
-## Computational Framework
+![Experimental and computational overview of paired Raman spectroscopy and MALDI-MSI](Fig1.png)
 
-![Overview of the experimental and computational framework](Fig1.png)
+*Fig. 1 | Experimental workflow, Raman imaging instrumentation, and representative molecular and spectral images from biological tissues.*
 
-**Figure 1.** Overview of the experimental workflow and computational framework integrating Raman spectroscopy and MALDI mass spectrometry imaging for molecular interpretation of biological Raman spectra.
+## Computational methods
 
-### 1. Molecular-to-Spectral Decoding (Decoder)
+### Decoder: molecular-to-spectral mapping
 
-The Decoder models the relationship between molecular abundance profiles measured by MALDI-MSI and their corresponding Raman spectral signatures.
+The Decoder uses paired MALDI and Raman measurements to fit a ridge regression model that maps molecular abundance features to Raman spectral features. The fitted model can be applied to an independent dataset with the same molecular feature definitions to predict its Raman spectra.
 
-Using paired molecular and spectral measurements, a regularized regression model is established to predict Raman spectral features from MALDI molecular features. This approach provides a computational framework for investigating molecular contributions to biological Raman signals.
+- **Input:** MALDI molecular abundance matrix
+- **Target:** Raman spectral intensity matrix
 
-- **Input:** MALDI molecular feature matrix
-- **Output:** Predicted Raman spectral feature matrix
+### Translator: spectral-to-molecular mapping
 
-### 2. Spectral-to-Molecular Translation (Translator)
+The Translator fits the reverse mapping, using Raman spectral features to predict MALDI molecular abundance features. The model can be evaluated on an independent, spatially paired Raman–MALDI dataset.
 
-The Translator performs the reverse mapping, predicting molecular abundance profiles from Raman spectral measurements.
+- **Input:** Raman spectral intensity matrix
+- **Target:** MALDI molecular abundance matrix
 
-Using paired Raman–MALDI data, the model learns relationships between Raman spectral features and mass spectrometry-derived molecular features. This framework enables Raman-based prediction of molecular distributions and supports the investigation of molecular information across biological tissues.
+Both scripts implement model fitting, prediction, and evaluation from user-supplied paired data. Preprocessing of raw measurements and spatial registration are not part of this repository.
 
-- **Input:** Raman spectral feature matrix
-- **Output:** Predicted MALDI molecular feature matrix
-
-Both components use ridge regression for regularized multivariate prediction.
-
-## Repository Structure
+## Repository contents
 
 ```text
-Molecular-Code-of-Biological-Raman-Spectroscopy/
+Molecule-Raman/
 ├── README.md
 ├── Fig1.png
 ├── decoder.py
@@ -48,77 +44,48 @@ Molecular-Code-of-Biological-Raman-Spectroscopy/
 └── .gitignore
 ```
 
-- **`decoder.py`** — Molecular-to-spectral decoding using paired MALDI and Raman measurements.
-- **`translator.py`** — Spectral-to-molecular translation using paired Raman and MALDI measurements.
-- **`Fig1.png`** — Overview of the experimental and computational framework.
-- **`requirements.txt`** — Python dependencies for the computational workflow.
-- **`.gitignore`** — Excludes local datasets, caches, and other non-repository files.
+- `decoder.py`: MALDI-to-Raman regression workflow
+- `translator.py`: Raman-to-MALDI regression workflow
+- `Fig1.png`: Experimental and computational overview
+- `requirements.txt`: Python package dependencies
 
 ## Installation
 
-Clone this repository and install the required Python packages:
-
 ```bash
-git clone https://github.com/USERNAME/Molecular-Code-of-Biological-Raman-Spectroscopy.git
-cd Molecular-Code-of-Biological-Raman-Spectroscopy
+git clone https://github.com/MinLab-Columbia/Molecule-Raman.git
+cd Molecule-Raman
 pip install -r requirements.txt
 ```
 
-Replace `USERNAME` with the GitHub account or organization hosting this repository.
+## Input data
 
-## Input Data
+The scripts accept preprocessed, spatially paired Raman and MALDI measurements in HDF5 (`.h5`) files. Each file must contain:
 
-The computational workflows accept preprocessed, spatially paired Raman and MALDI datasets stored in HDF5 (`.h5`) format.
+| HDF5 dataset | Contents | Shape |
+| --- | --- | --- |
+| `maldi_matrix` | Molecular abundance measurements | `(n_pixels, n_maldi_features)` |
+| `raman_matrix_median` | Raman spectral intensities | `(n_pixels, n_raman_features)` |
 
-Each input file should contain the following datasets:
-
-| Dataset | Description |
-| --- | --- |
-| `maldi_matrix` | Molecular abundance matrix, shape `(n_pixels, n_maldi_features)` |
-| `raman_matrix_median` | Raman spectral matrix, shape `(n_pixels, n_raman_features)` |
-| `x_coords` | Optional spatial x-coordinates |
-| `y_coords` | Optional spatial y-coordinates |
-
-Each row of the Raman and MALDI matrices must correspond to the same spatially registered measurement location. The data should already be preprocessed and spatially aligned before applying the computational workflows. Training and testing files must use consistent feature definitions for the model inputs and targets.
+The optional `x_coords` and `y_coords` datasets may be included for spatial reference. Rows in the Raman and MALDI matrices must represent corresponding spatial locations. Training and test datasets must use the same feature identities and order within each modality.
 
 ## Usage
 
-The Decoder and Translator scripts operate on separate training and testing datasets. Each model is fitted on the user-provided training data; no pretrained model is required.
+Use separate HDF5 files for model fitting and evaluation. Both files must contain paired Raman and MALDI matrices in the format described above.
 
-**Molecular-to-spectral decoding:**
-
-```bash
-python decoder.py --train train_data.h5 --test test_data.h5
-```
-
-**Spectral-to-molecular translation:**
+**Molecular-to-spectral decoding**
 
 ```bash
-python translator.py --train train_data.h5 --test test_data.h5
+python decoder.py --train path/to/train.h5 --test path/to/test.h5
 ```
 
-Each workflow follows the same general computational procedure:
+**Spectral-to-molecular translation**
 
-1. Load paired Raman and MALDI feature matrices.
-2. Construct the corresponding input and target matrices.
-3. Fit a ridge regression model using the training dataset.
-4. Predict spectral or molecular features for the test dataset.
-5. Evaluate prediction performance.
+```bash
+python translator.py --train path/to/train.h5 --test path/to/test.h5
+```
 
-Users can apply these implementations to their own preprocessed, spatially paired Raman–MALDI datasets.
+Each script fits a ridge regression model on the training data and evaluates predictions against the corresponding measured features in the test data. No pretrained weights are required.
 
-## Data Availability
+## Data availability
 
-The complete experimental Raman and MALDI datasets are not included in this repository due to their large size.
-
-This repository provides the core computational implementations rather than the complete experimental data-processing and figure-generation pipeline. No pretrained models are distributed. Users can train and evaluate the models using their own preprocessed, spatially paired Raman–MALDI datasets.
-
-For information regarding the availability of datasets supporting the manuscript, please refer to the Data Availability statement in the associated publication when available.
-
-## Citation
-
-If you use this code in your research, please cite:
-
-*Molecular Code of Biological Raman Spectroscopy.*
-
-Full citation information will be updated upon publication.
+The complete experimental datasets are not hosted in this repository because of their size. No pretrained models are included. Users may run the code on their own preprocessed and spatially registered Raman–MALDI measurements. Availability of the data supporting the study is described in the manuscript's Data Availability statement.
