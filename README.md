@@ -30,7 +30,7 @@ The Translator fits the reverse mapping, using Raman spectral features to predic
 - **Input:** Raman spectral intensity matrix
 - **Target:** MALDI molecular abundance matrix
 
-Both scripts implement model fitting, prediction, and evaluation from user-supplied paired data. Preprocessing of raw measurements and spatial registration are not part of this repository.
+Both scripts implement model fitting, prediction, and evaluation from user-supplied paired data. They use ridge regression with a default regularization strength of `alpha=0.01` and report correlation-based metrics, R², and spatial SSIM when coordinates permit. SSIM uses only complete 7 × 7 neighborhoods of measured pixels; unmeasured locations are excluded. Raw-data preprocessing and spatial registration are outside the scope of this repository.
 
 ## Repository contents
 
@@ -40,14 +40,15 @@ Molecule-Raman/
 ├── Fig1.png
 ├── decoder.py
 ├── translator.py
-├── requirements.txt
-└── .gitignore
+└── requirements.txt
 ```
 
 - `decoder.py`: MALDI-to-Raman regression workflow
 - `translator.py`: Raman-to-MALDI regression workflow
 - `Fig1.png`: Experimental and computational overview
 - `requirements.txt`: Python package dependencies
+
+The paired spinal cord example datasets are distributed as **GitHub Release assets**, rather than files tracked within the source repository.
 
 ## Installation
 
@@ -56,6 +57,17 @@ git clone https://github.com/MinLab-Columbia/Molecule-Raman.git
 cd Molecule-Raman
 pip install -r requirements.txt
 ```
+
+## Example paired datasets
+
+Two spatially paired spinal cord Raman–MALDI datasets are available in the [example-data-v1 release](https://github.com/MinLab-Columbia/Molecule-Raman/releases/tag/example-data-v1):
+
+| Dataset | Download |
+| --- | --- |
+| `SpinalCord04.h5` | [Download HDF5](https://github.com/MinLab-Columbia/Molecule-Raman/releases/download/example-data-v1/SpinalCord04.h5) |
+| `SpinalCord08_.h5` | [Download HDF5](https://github.com/MinLab-Columbia/Molecule-Raman/releases/download/example-data-v1/SpinalCord08_.h5) |
+
+Download the files from the Release page and place them in a local `data/` directory inside the cloned repository. Release assets are not included when cloning the repository.
 
 ## Input data
 
@@ -66,26 +78,26 @@ The scripts accept preprocessed, spatially paired Raman and MALDI measurements i
 | `maldi_matrix` | Molecular abundance measurements | `(n_pixels, n_maldi_features)` |
 | `raman_matrix_median` | Raman spectral intensities | `(n_pixels, n_raman_features)` |
 
-The optional `x_coords` and `y_coords` datasets may be included for spatial reference. Rows in the Raman and MALDI matrices must represent corresponding spatial locations. Training and test datasets must use the same feature identities and order within each modality.
+Optional `x_coords` and `y_coords` datasets, each with one coordinate per measured pixel, enable spatial SSIM evaluation. Rows in the Raman and MALDI matrices must represent corresponding spatial locations. Training and test datasets must have the same feature identities and order within each modality; matching feature counts alone is insufficient.
 
 ## Usage
 
-Use separate HDF5 files for model fitting and evaluation. Both files must contain paired Raman and MALDI matrices in the format described above.
+Both scripts fit a regression model to one paired HDF5 dataset and evaluate predictions on a separate paired HDF5 dataset. After downloading the two example files to `data/`, the following commands illustrate the workflow **provided the files use compatible Raman and MALDI feature definitions**:
 
 **Molecular-to-spectral decoding**
 
 ```bash
-python decoder.py --train path/to/train.h5 --test path/to/test.h5
+python decoder.py --train data/SpinalCord04.h5 --test data/SpinalCord08_.h5
 ```
 
 **Spectral-to-molecular translation**
 
 ```bash
-python translator.py --train path/to/train.h5 --test path/to/test.h5
+python translator.py --train data/SpinalCord04.h5 --test data/SpinalCord08_.h5
 ```
 
-Each script fits a ridge regression model on the training data and evaluates predictions against the corresponding measured features in the test data. No pretrained weights are required.
+Both scripts support `--alpha` (default `0.01`), `--output-dir`, and `--skip-ssim`. Results are written to `decoder_results/` or `translator_results/` by default, including predicted feature matrices, fitted coefficients, and evaluation metrics. No pretrained model weights are required or included.
 
 ## Data availability
 
-The complete experimental datasets are not hosted in this repository because of their size. No pretrained models are included. Users may run the code on their own preprocessed and spatially registered Raman–MALDI measurements. Availability of the data supporting the study is described in the manuscript's Data Availability statement.
+The example paired spinal cord datasets can be downloaded from the [GitHub Releases page](https://github.com/MinLab-Columbia/Molecule-Raman/releases/tag/example-data-v1). The complete experimental Raman and MALDI datasets are not hosted here because of their size. The repository provides the core computational workflows rather than the full raw-data preprocessing, spatial registration, and figure-generation pipeline. Availability of the data supporting the study is described in the manuscript's Data Availability statement.
